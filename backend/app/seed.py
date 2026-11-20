@@ -68,6 +68,41 @@ CREATE TABLE IF NOT EXISTS occupancy_proofs (
   event_ids_json TEXT NOT NULL,
   created_at TEXT NOT NULL
 );
+
+-- 回收扫描持久水位（形态择一：独立水位表，按扫描器名记录；非内存、非 settings 键）
+CREATE TABLE IF NOT EXISTS reclaim_scan_watermarks (
+  scanner_name TEXT PRIMARY KEY,
+  watermark TEXT NOT NULL,
+  advanced_at TEXT,
+  last_batch_id TEXT,
+  last_closed_count INTEGER NOT NULL DEFAULT 0
+);
+
+-- 回收批台账：成功/失败均留痕，失败批 next_watermark 为 NULL 且水位不前进
+CREATE TABLE IF NOT EXISTS reclaim_batches (
+  batch_id TEXT PRIMARY KEY,
+  scanner_name TEXT NOT NULL,
+  started_at TEXT NOT NULL,
+  finished_at TEXT,
+  prev_watermark TEXT,
+  next_watermark TEXT,
+  closed_count INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL,
+  detail_json TEXT NOT NULL DEFAULT '{}'
+);
+
+-- 回收批成员占用（核证只读接口的成员来源）
+CREATE TABLE IF NOT EXISTS reclaim_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  batch_id TEXT NOT NULL,
+  occupancy_id TEXT NOT NULL,
+  cell_id TEXT NOT NULL,
+  tracking_no TEXT NOT NULL,
+  opened_at TEXT NOT NULL,
+  reclaimed_at TEXT NOT NULL,
+  event_id TEXT,
+  UNIQUE(batch_id, occupancy_id)
+);
 """
 
 

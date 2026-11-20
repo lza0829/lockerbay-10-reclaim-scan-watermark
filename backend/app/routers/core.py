@@ -4,6 +4,7 @@ from app.db import connect
 from app.seed import overdue_hours
 from app.services import bay as bay_svc
 from app.services import ingest as ingest_svc
+from app.services import reclaim as reclaim_svc
 
 router = APIRouter(prefix="/api")
 
@@ -106,5 +107,32 @@ def put_overdue(body: dict = Body(...)):
         )
         conn.commit()
         return {"overdue_hours": hours}
+    finally:
+        conn.close()
+
+
+@router.post("/reclaim/scan")
+def post_reclaim_scan(body: dict = Body(default={})):
+    """跑一批超时回收：关账与水位同事务，失败回滚且水位不前进。
+
+    body.fail_on 仅供本地夹具注入中途失败（occupancy_id）。
+    """
+    scanner = body.get("scanner", reclaim_svc.DEFAULT_SCANNER)
+    fail_on = body.get("fail_on")
+    conn = connect()
+    try:
+        return reclaim_svc.run_scan(conn, scanner=scanner, fail_on=fail_on)
+    finally:
+        conn.close()
+
+
+@router.get("/reclaim/watermark-proof")
+def get_reclaim_watermark_proof(scanner: str | None = None):
+    """只读核证：水位、本批关闭数、成员占用、近期批台账。"""
+    conn = connect()
+    try:
+        return reclaim_svc.watermark_proof(
+            conn, scanner or reclaim_svc.DEFAULT_SCANNER
+        )
     finally:
         conn.close()

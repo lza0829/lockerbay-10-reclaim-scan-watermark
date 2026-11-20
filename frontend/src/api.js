@@ -19,4 +19,7 @@ export const api = {
   setOverdue: (overdue_hours) =>
     req('/api/settings/overdue-hours', { method: 'PUT', body: JSON.stringify({ overdue_hours }) }),
   ingest: () => req('/api/ingest/run', { method: 'POST', body: '{}' }),
+  reclaimScan: (body = {}) =>
+    req('/api/reclaim/scan', { method: 'POST', body: JSON.stringify(body) }),
+  reclaimProof: () => req('/api/reclaim/watermark-proof'),
 }
